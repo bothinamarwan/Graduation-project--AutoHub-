@@ -2,7 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const {
   getConversations, deleteConversation, getMessages,
-  chatWithBot, analyzeImage, chatWithImage,
+  chatWithBot, analyzeImage, chatWithImage, getHealth, triggerBuildIndex
 } = require('../controllers/ai.controller');
 const { verifyToken }  = require('../middleware/auth.middleware');
 const { uploadSingle } = require('../middleware/upload.middleware');
@@ -146,5 +146,33 @@ router.post('/analyze-image',   uploadSingle, analyzeImage);
  *         description: AI response
  */
 router.post('/chat-with-image', uploadSingle, chatWithImage);
+
+/**
+ * @swagger
+ * /api/ai/health:
+ *   get:
+ *     summary: Get AI model health status
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: AI health status
+ */
+router.get('/health', getHealth);
+
+/**
+ * @swagger
+ * /api/ai/build-index:
+ *   post:
+ *     summary: Trigger building the index for the AI model
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Index build status
+ */
+router.post('/build-index', triggerBuildIndex);
 
 module.exports = router;

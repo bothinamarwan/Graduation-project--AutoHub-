@@ -5,7 +5,7 @@
  * and update the ACTIVE_AI variable below.
  */
 
-const ACTIVE_AI = process.env.ACTIVE_AI || "openai"; // "openai" | "anthropic" | "gemini"
+const ACTIVE_AI = process.env.ACTIVE_AI || "custom"; // "openai" | "anthropic" | "gemini" | "custom"
 
 const SYSTEM_PROMPT = `You are an expert automotive assistant. You help users identify car brands, models, body types, and provide accurate vehicle specifications.
 
@@ -76,6 +76,82 @@ const chatWithAnthropic = async (messages, imageBase64 = null) => {
   return response.content[0].text;
 };
 
+// ─── Custom AI (CARID) ───────────────────────────────────────────────────────
+const chatWithCustomAI = async (messages, imageBase64 = null) => {
+  // If we have an image, the custom API might not support it in /chat
+  // The custom /chat endpoint only expects {"question": "..."}
+  const lastUserMsg = messages.filter(m => m.role === 'user').pop();
+  const question = lastUserMsg ? lastUserMsg.content : "Hello";
+
+  try {
+    const response = await fetch(`${process.env.CARID_API_URL}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question })
+    });
+    
+    if (!response.ok) {
+      console.error("Custom AI Chat Error:", await response.text());
+      return "Sorry, I am having trouble connecting to my brain right now.";
+    }
+
+    // Parse the response
+    const text = await response.text();
+    try {
+      const data = JSON.parse(text);
+      return data.answer || data.response || data.reply || text;
+    } catch {
+      return text;
+    }
+  } catch (err) {
+    console.error("Fetch error to Custom AI chat:", err);
+    return "Error communicating with AI.";
+  }
+};
+
+const analyzeWithCustomAI = async (imageBase64) => {
+  try {
+    const formData = new FormData();
+    const buffer = Buffer.from(imageBase64, 'base64');
+    const blob = new Blob([buffer], { type: 'image/jpeg' });
+    formData.append("file", blob, "image.jpg");
+
+    const response = await fetch(`${process.env.CARID_API_URL}/identify`, {
+      method: "POST",
+      body: formData
+    });
+
+    if (!response.ok) {
+      console.error("Custom AI Identify Error:", await response.text());
+      return { brand: null, model: null, bodyType: null, yearRange: null, confidence: "low", description: "API error" };
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    console.error("Fetch error to Custom AI identify:", err);
+    return { brand: null, model: null, bodyType: null, yearRange: null, confidence: "low", description: "Connection error" };
+  }
+};
+
+const checkCustomAIHealth = async () => {
+  try {
+    const response = await fetch(`${process.env.CARID_API_URL}/health`);
+    return await response.json();
+  } catch (err) {
+    return { status: "error", error: err.message };
+  }
+};
+
+const buildCustomAIIndex = async () => {
+  try {
+    const response = await fetch(`${process.env.CARID_API_URL}/build-index`, { method: "POST" });
+    return await response.json();
+  } catch (err) {
+    return { status: "error", error: err.message };
+  }
+};
+
 // ─── Public interface ─────────────────────────────────────────────────────────
 
 /**
@@ -88,6 +164,8 @@ const chat = async (messages, imageBase64 = null) => {
   switch (ACTIVE_AI) {
     case "anthropic":
       return chatWithAnthropic(messages, imageBase64);
+    case "custom":
+      return chatWithCustomAI(messages, imageBase64);
     case "openai":
     default:
       return chatWithOpenAI(messages, imageBase64);
@@ -100,6 +178,10 @@ const chat = async (messages, imageBase64 = null) => {
  * @returns {Promise<Object>} - { brand, model, bodyType, yearRange, confidence, description }
  */
 const analyzeCarImage = async (imageBase64) => {
+  if (ACTIVE_AI === "custom") {
+    return analyzeWithCustomAI(imageBase64);
+  }
+
   const prompt = `Analyze this car image and respond ONLY with a valid JSON object (no markdown, no explanation):
 {
   "brand": "brand name or null",
@@ -122,4 +204,4 @@ const analyzeCarImage = async (imageBase64) => {
   }
 };
 
-module.exports = { chat, analyzeCarImage };
+module.exports = { chat, analyzeCarImage, checkCustomAIHealth, buildCustomAIIndex };

@@ -1,4 +1,4 @@
-const { chat, analyzeCarImage } = require('../services/ai.service');
+const { chat, analyzeCarImage, checkCustomAIHealth, buildCustomAIIndex } = require('../services/ai.service');
 const Conversation               = require('../models/Conversation');
 const Message                    = require('../models/Message');
 const asyncHandler               = require('../utils/asyncHandler');
@@ -133,4 +133,16 @@ const chatWithImage = asyncHandler(async (req, res) => {
   res.success({ conversationId: convo._id, reply, imageUrl });
 });
 
-module.exports = { getConversations, deleteConversation, getMessages, chatWithBot, analyzeImage, chatWithImage };
+// GET /api/ai/health
+const getHealth = asyncHandler(async (req, res) => {
+  const result = await checkCustomAIHealth();
+  res.success({ health: result });
+});
+
+// POST /api/ai/build-index
+const triggerBuildIndex = asyncHandler(async (req, res) => {
+  const result = await buildCustomAIIndex();
+  res.success({ indexStatus: result });
+});
+
+module.exports = { getConversations, deleteConversation, getMessages, chatWithBot, analyzeImage, chatWithImage, getHealth, triggerBuildIndex };
