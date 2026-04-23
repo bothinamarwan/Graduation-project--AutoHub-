@@ -66,12 +66,21 @@ const googleCallback = (req, res) => {
   const token = generateToken(user._id);
   attachSession(req, user);
 
-  const frontendURL = process.env.CLIENT_URL || 'http://localhost:3000';
+  const frontendURL = process.env.CLIENT_URL;
 
-  if (!user.isProfileComplete)
-    return res.redirect(`${frontendURL}/auth/choose-role?token=${token}&userId=${user._id}`);
-
-  res.redirect(`${frontendURL}/auth/success?token=${token}`);
+  // If a frontend URL is configured, redirect the browser to the frontend
+  if (frontendURL) {
+    if (!user.isProfileComplete)
+      return res.redirect(`${frontendURL}/auth/choose-role?token=${token}&userId=${user._id}`);
+    return res.redirect(`${frontendURL}/auth/success?token=${token}`);
+  } 
+  
+  // If no frontend URL is configured (e.g. testing phase), just return JSON
+  res.success({ 
+    user, 
+    token, 
+    nextStep: !user.isProfileComplete ? '/api/auth/google/set-role' : 'none' 
+  }, 'Google Login successful. (No CLIENT_URL set for redirect)');
 };
 
 // POST /api/auth/google/set-role
