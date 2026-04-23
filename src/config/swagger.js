@@ -6,9 +6,13 @@ const options = {
     info: {
       title: 'Automotive API',
       version: '1.0.0',
-      description: 'API documentation for the Automotive Backend project.',
+      description: 'graduation-project-autohub-production.up.railway.app',
     },
     servers: [
+      {
+        url: 'https://graduation-project-autohub-production.up.railway.app',
+        description: 'Production server',
+      },
       {
         url: 'http://localhost:' + (process.env.PORT || 3000),
         description: 'Local server',
