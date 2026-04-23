@@ -36,11 +36,13 @@ app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', creden
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000, max: 100,
+  validate: { xForwardedForHeader: false },
   message: { success: false, message: 'Too many requests, try again later.' },
 }));
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000, max: 10,
+  validate: { xForwardedForHeader: false },
   message: { success: false, message: 'AI rate limit reached. Wait a moment.' },
 });
 
