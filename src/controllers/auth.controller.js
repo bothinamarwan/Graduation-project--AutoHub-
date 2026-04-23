@@ -26,6 +26,40 @@ const register = asyncHandler(async (req, res) => {
   res.created({ user, token }, 'Account created successfully.');
 });
 
+// POST /api/auth/register-user
+const registerUser = asyncHandler(async (req, res) => {
+  const { name, email, password, phone } = req.body;
+
+  const user  = await User.create({
+    name, email, password, phone,
+    role: 'user',
+    authProvider: 'local',
+    isProfileComplete: true,
+  });
+
+  const token = generateToken(user._id);
+  attachSession(req, user);
+
+  res.created({ user, token }, 'User account created successfully.');
+});
+
+// POST /api/auth/register-dealer
+const registerDealer = asyncHandler(async (req, res) => {
+  const { name, email, password, phone } = req.body;
+
+  const user  = await User.create({
+    name, email, password, phone,
+    role: 'dealer',
+    authProvider: 'local',
+    isProfileComplete: true,
+  });
+
+  const token = generateToken(user._id);
+  attachSession(req, user);
+
+  res.created({ user, token }, 'Dealer account created successfully.');
+});
+
 // POST /api/auth/login
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -98,4 +132,4 @@ const setRole = asyncHandler(async (req, res) => {
   res.success({ user }, 'Role set successfully.');
 });
 
-module.exports = { register, login, logout, getMe, googleCallback, setRole };
+module.exports = { register, registerUser, registerDealer, login, logout, getMe, googleCallback, setRole };

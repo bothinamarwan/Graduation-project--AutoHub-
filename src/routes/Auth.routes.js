@@ -40,7 +40,7 @@ const express  = require('express');
 const router   = express.Router();
 const passport = require('../config/passport');
 const {
-  register, login, logout, getMe,
+  register, registerUser, registerDealer, login, logout, getMe,
   googleCallback, setRole,
 } = require('../controllers/auth.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
@@ -83,6 +83,68 @@ const authValidation = require('../validations/auth.validation');
  *         description: Validation error or User already exists
  */
 router.post('/register',        validate(authValidation.register), register);
+
+/**
+ * @swagger
+ * /api/auth/register/user:
+ *   post:
+ *     summary: Register a new regular user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Validation error or User already exists
+ */
+router.post('/register/user',   validate(authValidation.registerUser), registerUser);
+
+/**
+ * @swagger
+ * /api/auth/register/dealer:
+ *   post:
+ *     summary: Register a new dealer
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Dealer registered successfully
+ *       400:
+ *         description: Validation error or Dealer already exists
+ */
+router.post('/register/dealer', validate(authValidation.registerDealer), registerDealer);
 
 /**
  * @swagger

@@ -10,6 +10,24 @@ const register = {
   }),
 };
 
+const registerUser = {
+  body: Joi.object().keys({
+    name:     Joi.string().required(),
+    email:    Joi.string().email().required(),
+    password: Joi.string().min(6).required(),
+    phone:    Joi.string().optional().allow(''),
+  }),
+};
+
+const registerDealer = {
+  body: Joi.object().keys({
+    name:     Joi.string().required(),
+    email:    Joi.string().email().required(),
+    password: Joi.string().min(6).required(),
+    phone:    Joi.string().optional().allow(''),
+  }),
+};
+
 const login = {
   body: Joi.object().keys({
     email:    Joi.string().email().required(),
@@ -25,6 +43,8 @@ const setRole = {
 
 module.exports = {
   register,
+  registerUser,
+  registerDealer,
   login,
   setRole,
 };
