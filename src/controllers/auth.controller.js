@@ -11,7 +11,7 @@ const attachSession = (req, user) => {
 
 // POST /api/auth/register
 const register = asyncHandler(async (req, res) => {
-  const { name, email, password, phone, role } = req.body;
+  let { name, email, password, phone, role } = req.body;
 
   const user  = await User.create({
     name, email, password, phone,
@@ -85,7 +85,7 @@ const googleCallback = (req, res) => {
 
 // POST /api/auth/google/set-role
 const setRole = asyncHandler(async (req, res) => {
-  const { role } = req.body;
+  let { role } = req.body;
 
   const user = await User.findByIdAndUpdate(
     req.user._id,

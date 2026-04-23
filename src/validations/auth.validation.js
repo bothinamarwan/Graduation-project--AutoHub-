@@ -6,7 +6,7 @@ const register = {
     email:    Joi.string().email().required(),
     password: Joi.string().min(6).required(),
     phone:    Joi.string().optional().allow(''),
-    role:     Joi.string().valid('user', 'dealer').default('user'),
+    role:     Joi.string().valid('user', 'dealer').empty(Joi.any().valid('', null)).default('user'),
   }),
 };
 
@@ -19,7 +19,7 @@ const login = {
 
 const setRole = {
   body: Joi.object().keys({
-    role: Joi.string().valid('user', 'dealer').required(),
+    role: Joi.string().valid('user', 'dealer').empty(Joi.any().valid('', null)).default('user'),
   }),
 };
 
