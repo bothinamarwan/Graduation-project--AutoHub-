@@ -30,23 +30,46 @@ const registerUser = asyncHandler(async (req, res) => {
   });
 
   const confirmUrl = `${req.protocol}://${req.get('host')}/api/auth/confirm-email/${emailConfirmationToken}`;
-  const message = `Please confirm your email by clicking the following link: \n\n ${confirmUrl}`;
   
+  const htmlMessage = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+      <h2 style="color: #333; text-align: center;">Welcome to AutoHub! 🚗</h2>
+      <p>Hello ${name},</p>
+      <p>Thank you for registering. Please confirm your email address to activate your account:</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${confirmUrl}" style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Confirm Email Address</a>
+      </div>
+      <p>If the button doesn't work, copy and paste this link into your browser:</p>
+      <p style="word-break: break-all; color: #007bff;">${confirmUrl}</p>
+      <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+      <p style="font-size: 12px; color: #777;">This link will expire in 24 hours.</p>
+    </div>
+  `;
+  
+  let emailSent = true;
   try {
     await sendEmail({
       to: user.email,
-      subject: 'Email Confirmation',
-      text: message,
+      subject: 'Welcome to AutoHub - Confirm Your Email',
+      text: `Welcome to AutoHub! Please confirm your email by clicking: ${confirmUrl}`,
+      html: htmlMessage,
     });
   } catch (error) {
-    console.error('Email could not be sent:', error);
+    emailSent = false;
+    console.error('Email sending failed during registration');
   }
 
   const token = generateToken(user._id);
   attachSession(req, user);
 
-  res.created({ user, token }, 'User account created successfully. Please check your email to confirm your account.');
+  res.created(
+    { user, token, emailSent }, 
+    emailSent 
+      ? 'User account created. Please check your email to confirm.' 
+      : 'User account created, but we couldn\'t send the confirmation email. Please contact support.'
+  );
 });
+
 
 // POST /api/auth/register-dealer
 const registerDealer = asyncHandler(async (req, res) => {
@@ -75,23 +98,46 @@ const registerDealer = asyncHandler(async (req, res) => {
   });
 
   const confirmUrl = `${req.protocol}://${req.get('host')}/api/auth/confirm-email/${emailConfirmationToken}`;
-  const message = `Please confirm your email by clicking the following link: \n\n ${confirmUrl}`;
   
+  const htmlMessage = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+      <h2 style="color: #333; text-align: center;">Welcome to AutoHub Dealer Portal! 🏢</h2>
+      <p>Hello ${name},</p>
+      <p>Your dealer account has been created. Please confirm your email to start listing your vehicles:</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${confirmUrl}" style="background-color: #28a745; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Verify Dealer Account</a>
+      </div>
+      <p>If the button doesn't work, copy and paste this link into your browser:</p>
+      <p style="word-break: break-all; color: #28a745;">${confirmUrl}</p>
+      <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+      <p style="font-size: 12px; color: #777;">This link will expire in 24 hours.</p>
+    </div>
+  `;
+  
+  let emailSent = true;
   try {
     await sendEmail({
       to: user.email,
-      subject: 'Email Confirmation',
-      text: message,
+      subject: 'AutoHub Dealer - Confirm Your Email',
+      text: `Welcome to AutoHub! Please confirm your dealer email by clicking: ${confirmUrl}`,
+      html: htmlMessage,
     });
   } catch (error) {
-    console.error('Email could not be sent:', error);
+    emailSent = false;
+    console.error('Email sending failed during dealer registration');
   }
 
   const token = generateToken(user._id);
   attachSession(req, user);
 
-  res.created({ user, dealer, token }, 'Dealer account created successfully. Please check your email to confirm your account.');
+  res.created(
+    { user, dealer, token, emailSent }, 
+    emailSent 
+      ? 'Dealer account created. Please check your email to confirm.' 
+      : 'Dealer account created, but we couldn\'t send the confirmation email. Please contact support.'
+  );
 });
+
 
 // POST /api/auth/login
 const login = asyncHandler(async (req, res) => {
