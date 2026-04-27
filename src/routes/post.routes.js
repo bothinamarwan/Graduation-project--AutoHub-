@@ -85,7 +85,13 @@ router.get('/:id', validate(postValidation.getPost), getPostById);
  *               - description
  *               - brand
  *               - model
+ *               - bodyType
+ *               - year
+ *               - mileage
  *               - price
+ *               - condition
+ *               - color
+ *               - fuelType
  *               - contactPhone
  *             properties:
  *               title:
@@ -96,15 +102,13 @@ router.get('/:id', validate(postValidation.getPost), getPostById);
  *                 type: string
  *               model:
  *                 type: string
- *               price:
- *                 type: number
- *               contactPhone:
- *                 type: string
  *               bodyType:
  *                 type: string
  *               year:
  *                 type: integer
  *               mileage:
+ *                 type: number
+ *               price:
  *                 type: number
  *               currency:
  *                 type: string
@@ -117,6 +121,13 @@ router.get('/:id', validate(postValidation.getPost), getPostById);
  *                 type: string
  *               fuelType:
  *                 type: string
+ *               contactPhone:
+ *                 type: string
+ *               paymentOptions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: List of payment options, e.g. Cash, Installments
  *               images:
  *                 type: array
  *                 items:

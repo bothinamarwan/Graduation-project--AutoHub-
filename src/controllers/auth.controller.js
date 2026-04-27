@@ -1,6 +1,9 @@
 const User          = require('../models/User');
+const Dealer        = require('../models/Dealer');
 const generateToken = require('../utils/generateToken');
 const asyncHandler  = require('../utils/asyncHandler');
+const sendEmail     = require('../utils/sendEmail');
+const crypto        = require('crypto');
 
 const attachSession = (req, user) => {
   if (req.session) {
@@ -9,55 +12,85 @@ const attachSession = (req, user) => {
   }
 };
 
-// POST /api/auth/register
-const register = asyncHandler(async (req, res) => {
-  let { name, email, password, phone, role } = req.body;
-
-  const user  = await User.create({
-    name, email, password, phone,
-    role,
-    authProvider: 'local',
-    isProfileComplete: true,
-  });
-
-  const token = generateToken(user._id);
-  attachSession(req, user);
-
-  res.created({ user, token }, 'Account created successfully.');
-});
 
 // POST /api/auth/register-user
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, phone } = req.body;
+  const { name, email, password } = req.body;
+
+  const emailConfirmationToken = crypto.randomBytes(32).toString('hex');
+  const emailConfirmationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
   const user  = await User.create({
-    name, email, password, phone,
+    name, email, password,
     role: 'user',
     authProvider: 'local',
     isProfileComplete: true,
+    emailConfirmationToken,
+    emailConfirmationExpires,
   });
+
+  const confirmUrl = `${req.protocol}://${req.get('host')}/api/auth/confirm-email/${emailConfirmationToken}`;
+  const message = `Please confirm your email by clicking the following link: \n\n ${confirmUrl}`;
+  
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: 'Email Confirmation',
+      text: message,
+    });
+  } catch (error) {
+    console.error('Email could not be sent:', error);
+  }
 
   const token = generateToken(user._id);
   attachSession(req, user);
 
-  res.created({ user, token }, 'User account created successfully.');
+  res.created({ user, token }, 'User account created successfully. Please check your email to confirm your account.');
 });
 
 // POST /api/auth/register-dealer
 const registerDealer = asyncHandler(async (req, res) => {
-  const { name, email, password, phone } = req.body;
+  const { name, email, password, location, phone, whatsapp, taxNumber } = req.body;
+
+  const emailConfirmationToken = crypto.randomBytes(32).toString('hex');
+  const emailConfirmationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
   const user  = await User.create({
     name, email, password, phone,
     role: 'dealer',
     authProvider: 'local',
     isProfileComplete: true,
+    emailConfirmationToken,
+    emailConfirmationExpires,
   });
+
+  // Create Dealer Profile
+  const dealer = await Dealer.create({
+    user: user._id,
+    businessName: name, // Using full name as businessName
+    location: { address: location },
+    phone,
+    whatsapp,
+    taxNumber,
+  });
+
+  const confirmUrl = `${req.protocol}://${req.get('host')}/api/auth/confirm-email/${emailConfirmationToken}`;
+  const message = `Please confirm your email by clicking the following link: \n\n ${confirmUrl}`;
+  
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: 'Email Confirmation',
+      text: message,
+    });
+  } catch (error) {
+    console.error('Email could not be sent:', error);
+  }
 
   const token = generateToken(user._id);
   attachSession(req, user);
 
-  res.created({ user, token }, 'Dealer account created successfully.');
+  res.created({ user, dealer, token }, 'Dealer account created successfully. Please check your email to confirm your account.');
 });
 
 // POST /api/auth/login
@@ -104,8 +137,6 @@ const googleCallback = (req, res) => {
 
   // If a frontend URL is configured, redirect the browser to the frontend
   if (frontendURL) {
-    if (!user.isProfileComplete)
-      return res.redirect(`${frontendURL}/auth/choose-role?token=${token}&userId=${user._id}`);
     return res.redirect(`${frontendURL}/auth/success?token=${token}`);
   } 
   
@@ -113,23 +144,27 @@ const googleCallback = (req, res) => {
   res.success({ 
     user, 
     token, 
-    nextStep: !user.isProfileComplete ? '/api/auth/google/set-role' : 'none' 
+    nextStep: 'none' 
   }, 'Google Login successful. (No CLIENT_URL set for redirect)');
 };
 
-// POST /api/auth/google/set-role
-const setRole = asyncHandler(async (req, res) => {
-  let { role } = req.body;
+// GET /api/auth/confirm-email/:token
+const confirmEmail = asyncHandler(async (req, res) => {
+  const user = await User.findOne({
+    emailConfirmationToken: req.params.token,
+    emailConfirmationExpires: { $gt: Date.now() }
+  });
 
-  const user = await User.findByIdAndUpdate(
-    req.user._id,
-    { role, isProfileComplete: true },
-    { new: true }
-  );
+  if (!user) {
+    return res.fail('Invalid or expired token', 400);
+  }
 
-  if (req.session) req.session.role = role;
+  user.isEmailConfirmed = true;
+  user.emailConfirmationToken = undefined;
+  user.emailConfirmationExpires = undefined;
+  await user.save({ validateBeforeSave: false });
 
-  res.success({ user }, 'Role set successfully.');
+  res.success({}, 'Email confirmed successfully');
 });
 
-module.exports = { register, registerUser, registerDealer, login, logout, getMe, googleCallback, setRole };
+module.exports = { registerUser, registerDealer, login, logout, getMe, googleCallback, confirmEmail };

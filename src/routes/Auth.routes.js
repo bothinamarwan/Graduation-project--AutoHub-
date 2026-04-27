@@ -1,47 +1,9 @@
-// const express  = require("express");
-// const router   = express.Router();
-// const passport = require("../config/passport");
-// const {
-//   register, login, logout, getMe,
-//   googleCallback, setRole,
-// } = require("../controllers/auth.controller");
-// const { verifyToken } = require("../middleware/auth.middleware");
-
-// // ─── Local Auth ───────────────────────────────────────────────────────────────
-// router.post("/register", register);
-// router.post("/login",    login);
-// router.post("/logout",   logout);
-// router.get("/me",        verifyToken, getMe);
-
-// // ─── Google OAuth ─────────────────────────────────────────────────────────────
-
-// // Step 1 — redirect user to Google consent screen
-// // Scopes: profile (name + avatar) + email
-// router.get(
-//   "/google",
-//   passport.authenticate("google", { scope: ["profile", "email"], session: false })
-// );
-
-// // Step 2 — Google redirects back here after user approves
-// router.get(
-//   "/google/callback",
-//   passport.authenticate("google", {
-//     failureRedirect: `${process.env.CLIENT_URL || "http://localhost:3000"}/auth/login?error=google_failed`,
-//     session: false,  // we use our own JWT + express-session, not passport sessions
-//   }),
-//   googleCallback
-// );
-
-// // Step 3 — frontend role-selection page calls this after user picks a role
-// router.post("/google/set-role", verifyToken, setRole);
-
-// module.exports = router;
 const express  = require('express');
 const router   = express.Router();
 const passport = require('../config/passport');
 const {
-  register, registerUser, registerDealer, login, logout, getMe,
-  googleCallback, setRole,
+  registerUser, registerDealer, login, logout, getMe,
+  googleCallback, confirmEmail,
 } = require('../controllers/auth.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 const validate = require('../middleware/validate.middleware');
@@ -49,40 +11,7 @@ const authValidation = require('../validations/auth.validation');
 
 // ── Local auth ────────────────────────────────────────────────────────────────
 
-/**
- * @swagger
- * /api/auth/register:
- *   post:
- *     summary: Register a new user
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - email
- *               - password
- *               - role
- *             properties:
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *               password:
- *                 type: string
- *               role:
- *                 type: string
- *                 enum: [buyer, dealer, admin]
- *     responses:
- *       201:
- *         description: User registered successfully
- *       400:
- *         description: Validation error or User already exists
- */
-router.post('/register',        validate(authValidation.register), register);
+
 
 /**
  * @swagger
@@ -100,12 +29,15 @@ router.post('/register',        validate(authValidation.register), register);
  *               - name
  *               - email
  *               - password
+ *               - confirmPassword
  *             properties:
  *               name:
  *                 type: string
  *               email:
  *                 type: string
  *               password:
+ *                 type: string
+ *               confirmPassword:
  *                 type: string
  *     responses:
  *       201:
@@ -131,12 +63,27 @@ router.post('/register/user',   validate(authValidation.registerUser), registerU
  *               - name
  *               - email
  *               - password
+ *               - confirmPassword
+ *               - location
+ *               - phone
+ *               - whatsapp
+ *               - taxNumber
  *             properties:
  *               name:
  *                 type: string
  *               email:
  *                 type: string
  *               password:
+ *                 type: string
+ *               confirmPassword:
+ *                 type: string
+ *               location:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               whatsapp:
+ *                 type: string
+ *               taxNumber:
  *                 type: string
  *     responses:
  *       201:
@@ -201,6 +148,26 @@ router.post('/logout',          logout);
  */
 router.get('/me',               verifyToken, getMe);
 
+/**
+ * @swagger
+ * /api/auth/confirm-email/{token}:
+ *   get:
+ *     summary: Confirm email address
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Email confirmed successfully
+ *       400:
+ *         description: Invalid or expired token
+ */
+router.get('/confirm-email/:token', confirmEmail);
+
 // ── Google OAuth ──────────────────────────────────────────────────────────────
 /**
  * @swagger
@@ -241,33 +208,6 @@ router.get('/google/callback',
   googleCallback
 );
 
-/**
- * @swagger
- * /api/auth/google/set-role:
- *   post:
- *     summary: Set role for Google OAuth user
- *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - role
- *             properties:
- *               role:
- *                 type: string
- *                 enum: [buyer, dealer, admin]
- *               contactPhone:
- *                 type: string
- *     responses:
- *       200:
- *         description: Role set successfully
- */
-// Step 3 — frontend sends chosen role after Google login
-router.post('/google/set-role', verifyToken, validate(authValidation.setRole), setRole);
+
 
 module.exports = router;

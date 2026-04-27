@@ -10,6 +10,11 @@ const userSchema = new mongoose.Schema(
     phone:    { type: String, trim: true },
     avatar:   { type: String, default: "" },
     role:     { type: String, enum: ["user", "dealer"], default: "user" },
+    
+    // ── Email Confirmation ───────────────────────────────────────────────────
+    isEmailConfirmed: { type: Boolean, default: false },
+    emailConfirmationToken: { type: String },
+    emailConfirmationExpires: { type: Date },
 
     // ── Google OAuth fields ──────────────────────────────────────────────────
     googleId:       { type: String, unique: true, sparse: true }, // sparse = allows multiple nulls

@@ -31,16 +31,15 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             return done(null, user);
           }
 
-          // 3. Brand new user → create account but mark profile as incomplete
-          //    Role will be chosen on the frontend and sent via /api/auth/google/set-role
+          // 3. Brand new user → create account as a regular user
           user = await User.create({
             name,
             email,
             avatar,
             googleId,
             authProvider:      "google",
-            isProfileComplete: false, // role not chosen yet
-            role:              "user",  // temp default, overwritten after role selection
+            isProfileComplete: true, // role is set to user automatically
+            role:              "user", 
           });
 
           return done(null, user);

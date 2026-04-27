@@ -23,6 +23,7 @@ const dealerSchema = new mongoose.Schema(
     },
     phone:           { type: String, trim: true },
     whatsapp:        { type: String, trim: true },
+    taxNumber:       { type: String, trim: true },
     socialLinks: {
       facebook:      { type: String },
       instagram:     { type: String },

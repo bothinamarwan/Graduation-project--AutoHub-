@@ -46,9 +46,15 @@ const getPostById = asyncHandler(async (req, res) => {
 
 // POST /api/posts
 const createPost = asyncHandler(async (req, res) => {
-  const { title, description, brand, model, bodyType, year, mileage, price, currency, condition, color, transmission, fuelType, contactPhone } = req.body;
+  const { title, description, brand, model, bodyType, year, mileage, price, currency, condition, color, transmission, fuelType, contactPhone, paymentOptions } = req.body;
 
   const images = getFileUrls(req, req.files);
+  
+  // Format paymentOptions as array if it's a string
+  let parsedPaymentOptions = [];
+  if (paymentOptions) {
+    parsedPaymentOptions = Array.isArray(paymentOptions) ? paymentOptions : paymentOptions.split(',').map(o => o.trim());
+  }
 
   const post = await Post.create({
     dealer: req.user._id,
@@ -57,6 +63,7 @@ const createPost = asyncHandler(async (req, res) => {
     mileage: mileage ? Number(mileage) : undefined,
     price: Number(price), currency, condition, color, transmission, fuelType,
     contactPhone: contactPhone || req.user.phone,
+    paymentOptions: parsedPaymentOptions,
     images,
   });
 

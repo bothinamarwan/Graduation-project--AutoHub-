@@ -17,6 +17,7 @@ const postSchema = new mongoose.Schema(
     transmission: { type: String },
     fuelType: { type: String },
     contactPhone: { type: String, required: true },
+    paymentOptions: [{ type: String }],
     images: [{ type: String }],        // array of image URLs
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     likesCount: { type: Number, default: 0 },
