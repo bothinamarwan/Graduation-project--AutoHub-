@@ -29,7 +29,8 @@ const registerUser = asyncHandler(async (req, res) => {
     emailConfirmationExpires,
   });
 
-  const confirmUrl = `${req.protocol}://${req.get('host')}/api/auth/confirm-email/${emailConfirmationToken}`;
+  const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+  const confirmUrl = `${baseUrl}/api/auth/confirm-email/${emailConfirmationToken}`;
   
   const htmlMessage = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
@@ -97,7 +98,8 @@ const registerDealer = asyncHandler(async (req, res) => {
     taxNumber,
   });
 
-  const confirmUrl = `${req.protocol}://${req.get('host')}/api/auth/confirm-email/${emailConfirmationToken}`;
+  const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+  const confirmUrl = `${baseUrl}/api/auth/confirm-email/${emailConfirmationToken}`;
   
   const htmlMessage = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
