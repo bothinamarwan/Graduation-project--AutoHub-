@@ -1,22 +1,31 @@
 const nodemailer = require('nodemailer');
 
-// Create transporter once and reuse it for better performance
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // Use STARTTLS
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.trim() : '',
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 15000,
-  debug: true,
-  logger: true
-});
+/**
+ * Creates a fresh transporter using env vars at call time.
+ * IMPORTANT: Do NOT move this outside the function.
+ * The transporter must be created inside sendEmail() so it reads
+ * process.env.EMAIL_USER and process.env.EMAIL_PASS AFTER dotenv
+ * has loaded them. Creating it at module load time results in
+ * undefined credentials because this file is require()'d before
+ * dotenv.config() runs in index.js.
+ */
+const createTransporter = () =>
+  nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // STARTTLS
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.trim() : '',
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+  });
 
 const sendEmail = async ({ to, subject, text, html }) => {
+  const transporter = createTransporter();
+
   const mailOptions = {
     from: `"AutoHub" <${process.env.EMAIL_USER}>`,
     to,
@@ -31,10 +40,8 @@ const sendEmail = async ({ to, subject, text, html }) => {
     return info;
   } catch (error) {
     console.error(`❌ Failed to send email to ${to}:`, error.message);
-    throw error; 
+    throw error;
   }
 };
 
-
 module.exports = sendEmail;
-
