@@ -124,7 +124,11 @@ const registerDealer = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     emailSent = false;
-    console.error('Email sending failed during dealer registration');
+    console.error('❌ EMAIL ERROR (dealer registration):');
+    console.error('  Code   :', error.code);
+    console.error('  Message:', error.message);
+    console.error('  EMAIL_USER env:', process.env.EMAIL_USER || 'NOT SET');
+    console.error('  EMAIL_PASS env:', process.env.EMAIL_PASS ? 'SET' : 'NOT SET');
   }
 
   const token = generateToken(user._id);
