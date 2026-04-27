@@ -1,17 +1,22 @@
 const nodemailer = require('nodemailer');
 
-const sendEmail = async ({ to, subject, text, html }) => {
-  // Create transporter with explicit Gmail settings
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // Use SSL
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+// Create transporter once and reuse it for better performance
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // Use STARTTLS
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.trim() : '',
+  },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
+  debug: true,
+  logger: true
+});
 
+const sendEmail = async ({ to, subject, text, html }) => {
   const mailOptions = {
     from: `"AutoHub" <${process.env.EMAIL_USER}>`,
     to,
@@ -26,9 +31,10 @@ const sendEmail = async ({ to, subject, text, html }) => {
     return info;
   } catch (error) {
     console.error(`❌ Failed to send email to ${to}:`, error.message);
-    throw error; // Rethrow to let the caller handle it
+    throw error; 
   }
 };
+
 
 module.exports = sendEmail;
 
