@@ -8,12 +8,15 @@ const nodemailer = require('nodemailer');
  * has loaded them. Creating it at module load time results in
  * undefined credentials because this file is require()'d before
  * dotenv.config() runs in index.js.
+ *
+ * family: 4  → forces IPv4 to fix ENETUNREACH on Railway (IPv6 not supported for SMTP)
  */
 const createTransporter = () =>
   nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 587,
     secure: false, // STARTTLS
+    family: 4,     // Force IPv4 — fixes Railway ENETUNREACH error
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.trim() : '',
