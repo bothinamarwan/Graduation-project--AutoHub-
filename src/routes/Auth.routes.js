@@ -3,7 +3,7 @@ const router   = express.Router();
 const passport = require('../config/passport');
 const {
   registerUser, registerDealer, login, logout, getMe,
-  googleCallback, confirmEmail,
+  googleCallback,
 } = require('../controllers/auth.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 const validate = require('../middleware/validate.middleware');
@@ -148,25 +148,7 @@ router.post('/logout',          logout);
  */
 router.get('/me',               verifyToken, getMe);
 
-/**
- * @swagger
- * /api/auth/confirm-email/{token}:
- *   get:
- *     summary: Confirm email address
- *     tags: [Auth]
- *     parameters:
- *       - in: path
- *         name: token
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Email confirmed successfully
- *       400:
- *         description: Invalid or expired token
- */
-router.get('/confirm-email/:token', confirmEmail);
+
 
 // ── Google OAuth ──────────────────────────────────────────────────────────────
 /**

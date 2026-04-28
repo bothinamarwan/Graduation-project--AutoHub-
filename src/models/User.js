@@ -11,10 +11,8 @@ const userSchema = new mongoose.Schema(
     avatar:   { type: String, default: "" },
     role:     { type: String, enum: ["user", "dealer"], default: "user" },
     
-    // ── Email Confirmation ───────────────────────────────────────────────────
-    isEmailConfirmed: { type: Boolean, default: false },
-    emailConfirmationToken: { type: String },
-    emailConfirmationExpires: { type: Date },
+    // ── Email Confirmation (Defaults to true, flow removed) ───────────────────
+    isEmailConfirmed: { type: Boolean, default: true },
 
     // ── Google OAuth fields ──────────────────────────────────────────────────
     googleId:       { type: String, unique: true, sparse: true }, // sparse = allows multiple nulls
