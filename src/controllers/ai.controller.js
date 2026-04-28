@@ -3,6 +3,8 @@ const Conversation               = require('../models/Conversation');
 const Message                    = require('../models/Message');
 const asyncHandler               = require('../utils/asyncHandler');
 const { multerFileToBase64, getFileUrl } = require('../utils/Imagehelper');
+const mongoose = require('mongoose');
+
 
 // GET /api/ai/conversations
 const getConversations = asyncHandler(async (req, res) => {
@@ -36,12 +38,13 @@ const getMessages = asyncHandler(async (req, res) => {
 
 // ── shared helper: find or create a conversation ──────────────────────────────
 const findOrCreateConversation = async (userId, conversationId, title) => {
-  if (conversationId) {
+  if (conversationId && mongoose.Types.ObjectId.isValid(conversationId)) {
     const convo = await Conversation.findOne({ _id: conversationId, user: userId });
     if (convo) return convo;
   }
   return Conversation.create({ user: userId, title: title.slice(0, 60) });
 };
+
 
 // ── shared helper: load last N messages as AI history ─────────────────────────
 const loadHistory = async (convoId, limit = 20) => {
@@ -100,12 +103,21 @@ const chatWithBot = asyncHandler(async (req, res) => {
 const analyzeImage = asyncHandler(async (req, res) => {
   if (!req.file) return res.fail('An image file is required.');
 
-  const imageBase64 = multerFileToBase64(req.file);
-  const result      = await analyzeCarImage(imageBase64);
+  const { conversationId } = req.body;
+  const imageBase64 = await multerFileToBase64(req.file);
+  const result      = await analyzeCarImage(imageBase64, req.file.mimetype, req.file.originalname);
   const imageUrl    = getFileUrl(req, req.file);
 
-  res.success({ analysis: result, imageUrl });
+  // Save to database
+  const title = result.prediction || 'Car Analysis';
+  const convo = await findOrCreateConversation(req.user._id, conversationId, title);
+  
+  await saveUserMessage(convo._id, 'Analyzed an image', imageUrl);
+  await saveAIMessage(convo._id, result.description || `Identified as ${result.prediction}`);
+
+  res.success({ analysis: result, imageUrl, conversationId: convo._id });
 });
+
 
 // POST /api/ai/chat-with-image
 const chatWithImage = asyncHandler(async (req, res) => {
@@ -113,7 +125,7 @@ const chatWithImage = asyncHandler(async (req, res) => {
 
   const { message, conversationId } = req.body;
   const userMessage  = message?.trim() || 'What car is this? Give me detailed information.';
-  const imageBase64  = multerFileToBase64(req.file);
+  const imageBase64  = await multerFileToBase64(req.file);
   const imageUrl     = getFileUrl(req, req.file);
 
   const convo = await findOrCreateConversation(req.user._id, conversationId, userMessage);
@@ -122,7 +134,12 @@ const chatWithImage = asyncHandler(async (req, res) => {
 
   let reply = null;
   try {
-    reply = await chat([...history, { role: 'user', content: userMessage }], imageBase64);
+    reply = await chat(
+      [...history, { role: 'user', content: userMessage }], 
+      imageBase64, 
+      req.file.mimetype, 
+      req.file.originalname
+    );
     if (reply) {
       await saveAIMessage(convo._id, reply);
     }

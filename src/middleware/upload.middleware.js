@@ -24,14 +24,24 @@ const storage = new CloudinaryStorage({
   },
 });
 
+// AI Storage — No transformation to preserve original quality for analysis
+const aiStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder:          'automotive-ai',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+  },
+});
+
 const limits = { fileSize: 5 * 1024 * 1024 }; // 5 MB
 
 // ── Export upload instances ───────────────────────────────────────────────────
 const uploadSingle   = multer({ storage, fileFilter: imageFilter, limits }).single('image');
+const uploadAI       = multer({ storage: aiStorage, fileFilter: imageFilter, limits }).single('image');
 const uploadMultiple = multer({ storage, fileFilter: imageFilter, limits }).array('images', 8);
 const uploadFields   = multer({ storage, fileFilter: imageFilter, limits }).fields([
   { name: 'logo',       maxCount: 1 },
   { name: 'coverImage', maxCount: 1 },
 ]);
 
-module.exports = { uploadSingle, uploadMultiple, uploadFields };
+module.exports = { uploadSingle, uploadAI, uploadMultiple, uploadFields };

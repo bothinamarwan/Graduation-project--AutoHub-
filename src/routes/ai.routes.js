@@ -5,7 +5,7 @@ const {
   chatWithBot, analyzeImage, chatWithImage, getHealth, triggerBuildIndex
 } = require('../controllers/ai.controller');
 const { verifyToken }  = require('../middleware/auth.middleware');
-const { uploadSingle } = require('../middleware/upload.middleware');
+const { uploadSingle, uploadAI } = require('../middleware/upload.middleware');
 
 router.use(verifyToken); // all AI routes require login
 
@@ -111,11 +111,43 @@ router.post('/chat',            chatWithBot);
  *               image:
  *                 type: string
  *                 format: binary
+ *               conversationId:
+ *                 type: string
+ *                 description: Optional ID to continue a conversation
  *     responses:
  *       200:
  *         description: AI image analysis
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     conversationId:
+ *                       type: string
+ *                     analysis:
+
+ *                       type: object
+ *                       properties:
+ *                         brand: { type: string }
+ *                         model: { type: string }
+ *                         bodyType: { type: string }
+ *                         yearRange: { type: string }
+ *                         color: { type: string }
+ *                         confidence: { type: number }
+ *                         description: { type: string }
+ *                         prediction: { type: string }
+ *                         status: { type: string }
+ *                         webSource: { type: string }
+ *                         angle: { type: string }
+ *                     imageUrl:
+ *                       type: string
  */
-router.post('/analyze-image',   uploadSingle, analyzeImage);
+router.post('/analyze-image',   uploadAI, analyzeImage);
 
 /**
  * @swagger
@@ -145,7 +177,7 @@ router.post('/analyze-image',   uploadSingle, analyzeImage);
  *       200:
  *         description: AI response
  */
-router.post('/chat-with-image', uploadSingle, chatWithImage);
+router.post('/chat-with-image', uploadAI, chatWithImage);
 
 /**
  * @swagger
@@ -158,6 +190,23 @@ router.post('/chat-with-image', uploadSingle, chatWithImage);
  *     responses:
  *       200:
  *         description: AI health status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     health:
+ *                       type: object
+ *                       properties:
+ *                         status: { type: string }
+ *                         groq_key_set: { type: boolean }
+ *                         serper_key_set: { type: boolean }
+ *                         pipeline: { type: string }
  */
 router.get('/health', getHealth);
 

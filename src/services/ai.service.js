@@ -77,11 +77,21 @@ const chatWithAnthropic = async (messages, imageBase64 = null) => {
 };
 
 // ─── Custom AI (CARID) ───────────────────────────────────────────────────────
-const chatWithCustomAI = async (messages, imageBase64 = null) => {
-  // If we have an image, the custom API might not support it in /chat
-  // The custom /chat endpoint only expects {"question": "..."}
+const chatWithCustomAI = async (messages, imageBase64 = null, mimetype = 'image/jpeg', filename = 'image.jpg') => {
   const lastUserMsg = messages.filter(m => m.role === 'user').pop();
-  const question = lastUserMsg ? lastUserMsg.content : "Hello";
+  let question = lastUserMsg ? lastUserMsg.content : "Hello";
+
+  // If there's an image, we first identify it to get context
+  if (imageBase64) {
+    try {
+      const analysis = await analyzeWithCustomAI(imageBase64, mimetype, filename);
+      if (analysis && analysis.status !== "error" && analysis.prediction) {
+        question = `[Context: The user uploaded an image of a ${analysis.prediction}. Details: ${analysis.message}] ${question}`;
+      }
+    } catch (err) {
+      console.error("Failed to get image context for chat:", err);
+    }
+  }
 
   try {
     const response = await fetch(`${process.env.CARID_API_URL}/chat`, {
@@ -92,29 +102,24 @@ const chatWithCustomAI = async (messages, imageBase64 = null) => {
     
     if (!response.ok) {
       console.error("Custom AI Chat Error:", await response.text());
-      return "Sorry, I am having trouble connecting to my brain right now.";
+      return "Sorry, I am having trouble connecting to the AI service right now.";
     }
 
-    // Parse the response
-    const text = await response.text();
-    try {
-      const data = JSON.parse(text);
-      return data.answer || data.response || data.reply || text;
-    } catch {
-      return text;
-    }
+    const data = await response.json();
+    return data.answer || "No response received.";
   } catch (err) {
     console.error("Fetch error to Custom AI chat:", err);
     return "Error communicating with AI.";
   }
 };
 
-const analyzeWithCustomAI = async (imageBase64) => {
+
+const analyzeWithCustomAI = async (imageBase64, mimetype = 'image/jpeg', filename = 'image.jpg') => {
   try {
     const formData = new FormData();
     const buffer = Buffer.from(imageBase64, 'base64');
-    const blob = new Blob([buffer], { type: 'image/jpeg' });
-    formData.append("file", blob, "image.jpg");
+    const blob = new Blob([buffer], { type: mimetype });
+    formData.append("file", blob, filename);
 
     const response = await fetch(`${process.env.CARID_API_URL}/identify`, {
       method: "POST",
@@ -122,17 +127,27 @@ const analyzeWithCustomAI = async (imageBase64) => {
     });
 
     if (!response.ok) {
-      console.error("Custom AI Identify Error:", await response.text());
-      return { brand: null, model: null, bodyType: null, yearRange: null, confidence: "low", description: "API error" };
+      const errorText = await response.text();
+      console.error("Custom AI Identify Error:", errorText);
+      return { 
+        status: "error", 
+        message: "API error: " + errorText,
+        details: { brand: null, model: null, generation: null, color: null } 
+      };
     }
 
     const data = await response.json();
     return data;
   } catch (err) {
     console.error("Fetch error to Custom AI identify:", err);
-    return { brand: null, model: null, bodyType: null, yearRange: null, confidence: "low", description: "Connection error" };
+    return { 
+      status: "error", 
+      message: "Connection error: " + err.message,
+      details: { brand: null, model: null, generation: null, color: null }
+    };
   }
 };
+
 
 const checkCustomAIHealth = async () => {
   try {
@@ -158,14 +173,16 @@ const buildCustomAIIndex = async () => {
  * Send a chat message (optionally with an image) to the AI
  * @param {Array}  messages      - Array of { role: "user"|"assistant", content: string }
  * @param {string} imageBase64   - Optional base64 image string (without data: prefix)
+ * @param {string} mimetype      - Optional mimetype of the image
+ * @param {string} filename      - Optional filename of the image
  * @returns {Promise<string>}    - AI text response
  */
-const chat = async (messages, imageBase64 = null) => {
+const chat = async (messages, imageBase64 = null, mimetype = 'image/jpeg', filename = 'image.jpg') => {
   switch (ACTIVE_AI) {
     case "anthropic":
       return chatWithAnthropic(messages, imageBase64);
     case "custom":
-      return chatWithCustomAI(messages, imageBase64);
+      return chatWithCustomAI(messages, imageBase64, mimetype, filename);
     case "openai":
     default:
       return chatWithOpenAI(messages, imageBase64);
@@ -175,11 +192,30 @@ const chat = async (messages, imageBase64 = null) => {
 /**
  * Analyse a car image and return structured JSON
  * @param {string} imageBase64
+ * @param {string} mimetype
+ * @param {string} filename
  * @returns {Promise<Object>} - { brand, model, bodyType, yearRange, confidence, description }
  */
-const analyzeCarImage = async (imageBase64) => {
+const analyzeCarImage = async (imageBase64, mimetype = 'image/jpeg', filename = 'image.jpg') => {
   if (ACTIVE_AI === "custom") {
-    return analyzeWithCustomAI(imageBase64);
+    const data = await analyzeWithCustomAI(imageBase64, mimetype, filename);
+    
+    // Normalize response for the frontend/controller
+    if (data.status === "error") return data;
+
+    return {
+      brand: data.details?.brand || null,
+      model: data.details?.model || null,
+      bodyType: data.details?.generation || null, // generation often contains body type or era
+      yearRange: data.details?.generation || null,
+      color: data.details?.color || null,
+      confidence: data.confidence,
+      description: data.message,
+      prediction: data.prediction,
+      status: data.status,
+      webSource: data.web_source,
+      angle: data.details?.angle
+    };
   }
 
   const prompt = `Analyze this car image and respond ONLY with a valid JSON object (no markdown, no explanation):
@@ -203,5 +239,6 @@ const analyzeCarImage = async (imageBase64) => {
     return { brand: null, model: null, bodyType: null, yearRange: null, confidence: "low", description: raw };
   }
 };
+
 
 module.exports = { chat, analyzeCarImage, checkCustomAIHealth, buildCustomAIIndex };
