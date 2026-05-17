@@ -83,8 +83,8 @@ const chatWithBot = asyncHandler(async (req, res) => {
   if (!message?.trim()) return res.fail('Message is required.');
 
   const convo = await findOrCreateConversation(req.user._id, conversationId, message);
-  await saveUserMessage(convo._id, message.trim());
   const history = await loadHistory(convo._id);
+  await saveUserMessage(convo._id, message.trim());
 
   let reply = null;
   try {
@@ -129,8 +129,8 @@ const chatWithImage = asyncHandler(async (req, res) => {
   const imageUrl     = getFileUrl(req, req.file);
 
   const convo = await findOrCreateConversation(req.user._id, conversationId, userMessage);
-  await saveUserMessage(convo._id, userMessage, imageUrl);
   const history = await loadHistory(convo._id, 10);
+  await saveUserMessage(convo._id, userMessage, imageUrl);
 
   let reply = null;
   try {

@@ -7,6 +7,14 @@
 
 const ACTIVE_AI = process.env.ACTIVE_AI || "custom"; // "openai" | "anthropic" | "gemini" | "custom"
 
+const getCustomBaseUrl = () => {
+  const url = process.env.CARID_API_URL;
+  if (!url) {
+    throw new Error("CARID_API_URL is not defined in environment variables.");
+  }
+  return url.replace(/\/$/, ""); // Remove trailing slash if present
+};
+
 const SYSTEM_PROMPT = `You are an expert automotive assistant. You help users identify car brands, models, body types, and provide accurate vehicle specifications.
 
 When analyzing car images:
@@ -94,10 +102,12 @@ const chatWithCustomAI = async (messages, imageBase64 = null, mimetype = 'image/
   }
 
   try {
-    const response = await fetch(`${process.env.CARID_API_URL}/chat`, {
+    const baseUrl = getCustomBaseUrl();
+    const response = await fetch(`${baseUrl}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question })
+      // Sending both the enriched question (for simple APIs) and the raw messages array (for APIs that support it)
+      body: JSON.stringify({ question, messages, history: messages.slice(0, -1) })
     });
     
     if (!response.ok) {
@@ -121,7 +131,8 @@ const analyzeWithCustomAI = async (imageBase64, mimetype = 'image/jpeg', filenam
     const blob = new Blob([buffer], { type: mimetype });
     formData.append("file", blob, filename);
 
-    const response = await fetch(`${process.env.CARID_API_URL}/identify`, {
+    const baseUrl = getCustomBaseUrl();
+    const response = await fetch(`${baseUrl}/identify`, {
       method: "POST",
       body: formData
     });
@@ -151,7 +162,8 @@ const analyzeWithCustomAI = async (imageBase64, mimetype = 'image/jpeg', filenam
 
 const checkCustomAIHealth = async () => {
   try {
-    const response = await fetch(`${process.env.CARID_API_URL}/health`);
+    const baseUrl = getCustomBaseUrl();
+    const response = await fetch(`${baseUrl}/health`);
     return await response.json();
   } catch (err) {
     return { status: "error", error: err.message };
@@ -160,7 +172,8 @@ const checkCustomAIHealth = async () => {
 
 const buildCustomAIIndex = async () => {
   try {
-    const response = await fetch(`${process.env.CARID_API_URL}/build-index`, { method: "POST" });
+    const baseUrl = getCustomBaseUrl();
+    const response = await fetch(`${baseUrl}/build-index`, { method: "POST" });
     return await response.json();
   } catch (err) {
     return { status: "error", error: err.message };
