@@ -36,18 +36,26 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://autohubb-phi.vercel.app',
-  process.env.CLIENT_URL
+  process.env.CLIENT_URL,
+  process.env.BASE_URL
 ].filter(Boolean);
 
 app.use(cors({ 
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     // Allow any explicitly allowed origin
-    // Allow any Vercel preview deployments
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+    // Allow Vercel preview deployments
+    // Allow common backend hosting domains so Swagger works on the same domain
+    if (
+      !origin || 
+      allowedOrigins.includes(origin) || 
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.railway.app') ||
+      origin.endsWith('.onrender.com')
+    ) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(null, false); // Fail silently so the browser handles the CORS block instead of throwing a 500 server error
     }
   }, 
   credentials: true 
