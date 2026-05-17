@@ -1,4 +1,4 @@
-const { chat, analyzeCarImage, checkCustomAIHealth, buildCustomAIIndex } = require('../services/ai.service');
+const { chat, analyzeCarImage, checkCustomAIHealth, buildCustomAIIndex, compareWithCustomAI } = require('../services/ai.service');
 const Conversation               = require('../models/Conversation');
 const Message                    = require('../models/Message');
 const asyncHandler               = require('../utils/asyncHandler');
@@ -79,24 +79,34 @@ const saveAIMessage = async (convoId, content) => {
 
 // POST /api/ai/chat
 const chatWithBot = asyncHandler(async (req, res) => {
-  const { message, conversationId } = req.body;
+  const { message, conversationId, buyer_mode, buyer_profile, car_context } = req.body;
   if (!message?.trim()) return res.fail('Message is required.');
 
   const convo = await findOrCreateConversation(req.user._id, conversationId, message);
   const history = await loadHistory(convo._id);
   await saveUserMessage(convo._id, message.trim());
 
-  let reply = null;
+  let replyData = null;
   try {
-    reply = await chat([...history, { role: 'user', content: message.trim() }]);
-    if (reply) {
-      await saveAIMessage(convo._id, reply);
+    replyData = await chat([...history, { role: 'user', content: message.trim() }], {
+      conversationId: convo._id.toString(),
+      buyer_mode,
+      buyer_profile,
+      car_context
+    });
+    
+    if (replyData && replyData.answer) {
+      await saveAIMessage(convo._id, replyData.answer);
     }
   } catch (error) {
     console.error('AI chat error:', error);
   }
 
-  res.success({ conversationId: convo._id, reply });
+  res.success({ 
+    conversationId: convo._id, 
+    reply: replyData?.answer, 
+    ...replyData 
+  });
 });
 
 // POST /api/ai/analyze-image
@@ -123,7 +133,7 @@ const analyzeImage = asyncHandler(async (req, res) => {
 const chatWithImage = asyncHandler(async (req, res) => {
   if (!req.file) return res.fail('An image file is required.');
 
-  const { message, conversationId } = req.body;
+  const { message, conversationId, buyer_mode, buyer_profile, car_context } = req.body;
   const userMessage  = message?.trim() || 'What car is this? Give me detailed information.';
   const imageBase64  = await multerFileToBase64(req.file);
   const imageUrl     = getFileUrl(req, req.file);
@@ -132,22 +142,44 @@ const chatWithImage = asyncHandler(async (req, res) => {
   const history = await loadHistory(convo._id, 10);
   await saveUserMessage(convo._id, userMessage, imageUrl);
 
-  let reply = null;
+  let replyData = null;
   try {
-    reply = await chat(
+    replyData = await chat(
       [...history, { role: 'user', content: userMessage }], 
-      imageBase64, 
-      req.file.mimetype, 
-      req.file.originalname
+      { 
+        imageBase64, 
+        mimetype: req.file.mimetype, 
+        filename: req.file.originalname,
+        conversationId: convo._id.toString(),
+        buyer_mode,
+        buyer_profile,
+        car_context
+      }
     );
-    if (reply) {
-      await saveAIMessage(convo._id, reply);
+    if (replyData && replyData.answer) {
+      await saveAIMessage(convo._id, replyData.answer);
     }
   } catch (error) {
     console.error('AI chatWithImage error:', error);
   }
 
-  res.success({ conversationId: convo._id, reply, imageUrl });
+  res.success({ 
+    conversationId: convo._id, 
+    reply: replyData?.answer, 
+    imageUrl, 
+    ...replyData 
+  });
+});
+
+// POST /api/ai/compare
+const compareCars = asyncHandler(async (req, res) => {
+  const { cars, history, aspect } = req.body;
+  if (!cars || !Array.isArray(cars) || cars.length < 2) {
+    return res.fail('At least two cars are required for comparison.');
+  }
+
+  const result = await compareWithCustomAI(cars, history || [], aspect || "");
+  res.success(result);
 });
 
 // GET /api/ai/health
@@ -162,4 +194,4 @@ const triggerBuildIndex = asyncHandler(async (req, res) => {
   res.success({ indexStatus: result });
 });
 
-module.exports = { getConversations, deleteConversation, getMessages, chatWithBot, analyzeImage, chatWithImage, getHealth, triggerBuildIndex };
+module.exports = { getConversations, deleteConversation, getMessages, chatWithBot, analyzeImage, chatWithImage, compareCars, getHealth, triggerBuildIndex };

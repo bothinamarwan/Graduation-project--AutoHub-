@@ -2,7 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const {
   getConversations, deleteConversation, getMessages,
-  chatWithBot, analyzeImage, chatWithImage, getHealth, triggerBuildIndex
+  chatWithBot, analyzeImage, chatWithImage, compareCars, getHealth, triggerBuildIndex
 } = require('../controllers/ai.controller');
 const { verifyToken }  = require('../middleware/auth.middleware');
 const { uploadSingle, uploadAI } = require('../middleware/upload.middleware');
@@ -178,6 +178,55 @@ router.post('/analyze-image',   uploadAI, analyzeImage);
  *         description: AI response
  */
 router.post('/chat-with-image', uploadAI, chatWithImage);
+
+/**
+ * @swagger
+ * /api/ai/compare:
+ *   post:
+ *     summary: Compare two or more cars directly via AI
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cars
+ *             properties:
+ *               cars:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: List of car names to compare
+ *               history:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *               aspect:
+ *                 type: string
+ *                 description: Specific aspect to compare (e.g., fuel efficiency, price)
+ *     responses:
+ *       200:
+ *         description: AI car comparison result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     cars:
+ *                       type: array
+ *                     summary:
+ *                       type: string
+ */
+router.post('/compare', compareCars);
 
 /**
  * @swagger

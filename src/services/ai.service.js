@@ -85,7 +85,8 @@ const chatWithAnthropic = async (messages, imageBase64 = null) => {
 };
 
 // ─── Custom AI (CARID) ───────────────────────────────────────────────────────
-const chatWithCustomAI = async (messages, imageBase64 = null, mimetype = 'image/jpeg', filename = 'image.jpg') => {
+const chatWithCustomAI = async (messages, options = {}) => {
+  const { imageBase64, mimetype = 'image/jpeg', filename = 'image.jpg', conversationId, car_context, buyer_mode, buyer_profile } = options;
   const lastUserMsg = messages.filter(m => m.role === 'user').pop();
   let question = lastUserMsg ? lastUserMsg.content : "Hello";
 
@@ -103,23 +104,54 @@ const chatWithCustomAI = async (messages, imageBase64 = null, mimetype = 'image/
 
   try {
     const baseUrl = getCustomBaseUrl();
+    const payload = {
+      question,
+      message: question,
+      conversationId: conversationId || "",
+      history: messages.slice(0, -1),
+      car_context: car_context || {},
+      buyer_mode: buyer_mode || false,
+      buyer_profile: buyer_profile || {
+        budget: "", priority: "", usage: "", fuel_pref: "", body_pref: "", location: "", currency: "USD", questions_asked: 0
+      }
+    };
+
     const response = await fetch(`${baseUrl}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // Sending both the enriched question (for simple APIs) and the raw messages array (for APIs that support it)
-      body: JSON.stringify({ question, messages, history: messages.slice(0, -1) })
+      body: JSON.stringify(payload)
     });
     
     if (!response.ok) {
       console.error("Custom AI Chat Error:", await response.text());
-      return "Sorry, I am having trouble connecting to the AI service right now.";
+      return { answer: "Sorry, I am having trouble connecting to the AI service right now." };
     }
 
     const data = await response.json();
-    return data.answer || "No response received.";
+    return data;
   } catch (err) {
     console.error("Fetch error to Custom AI chat:", err);
-    return "Error communicating with AI.";
+    return { answer: "Error communicating with AI." };
+  }
+};
+
+const compareWithCustomAI = async (cars, history = [], aspect = "") => {
+  try {
+    const baseUrl = getCustomBaseUrl();
+    const payload = { cars, history, aspect };
+    const response = await fetch(`${baseUrl}/compare`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      console.error("Custom AI Compare Error:", await response.text());
+      return { summary: "Error generating comparison." };
+    }
+    return await response.json();
+  } catch (err) {
+    console.error("Fetch error to Custom AI compare:", err);
+    return { summary: "Connection error." };
   }
 };
 
@@ -183,22 +215,25 @@ const buildCustomAIIndex = async () => {
 // ─── Public interface ─────────────────────────────────────────────────────────
 
 /**
- * Send a chat message (optionally with an image) to the AI
+ * Send a chat message (optionally with an image or extra options) to the AI
  * @param {Array}  messages      - Array of { role: "user"|"assistant", content: string }
- * @param {string} imageBase64   - Optional base64 image string (without data: prefix)
- * @param {string} mimetype      - Optional mimetype of the image
- * @param {string} filename      - Optional filename of the image
- * @returns {Promise<string>}    - AI text response
+ * @param {Object} options       - Additional options (imageBase64, conversationId, etc.)
+ * @returns {Promise<Object>}    - AI rich response object
  */
-const chat = async (messages, imageBase64 = null, mimetype = 'image/jpeg', filename = 'image.jpg') => {
+const chat = async (messages, options = {}) => {
+  // Backwards compatibility for old calls that pass imageBase64 directly
+  if (typeof options === 'string') {
+    options = { imageBase64: arguments[1], mimetype: arguments[2] || 'image/jpeg', filename: arguments[3] || 'image.jpg' };
+  }
+
   switch (ACTIVE_AI) {
     case "anthropic":
-      return chatWithAnthropic(messages, imageBase64);
+      return { answer: await chatWithAnthropic(messages, options.imageBase64) };
     case "custom":
-      return chatWithCustomAI(messages, imageBase64, mimetype, filename);
+      return chatWithCustomAI(messages, options);
     case "openai":
     default:
-      return chatWithOpenAI(messages, imageBase64);
+      return { answer: await chatWithOpenAI(messages, options.imageBase64) };
   }
 };
 
@@ -243,7 +278,8 @@ const analyzeCarImage = async (imageBase64, mimetype = 'image/jpeg', filename = 
 }`;
 
   const messages = [{ role: "user", content: prompt }];
-  const raw = await chat(messages, imageBase64);
+  const rawData = await chat(messages, { imageBase64, mimetype, filename });
+  const raw = rawData.answer || "";
 
   try {
     const clean = raw.replace(/```json|```/g, "").trim();
@@ -254,4 +290,4 @@ const analyzeCarImage = async (imageBase64, mimetype = 'image/jpeg', filename = 
 };
 
 
-module.exports = { chat, analyzeCarImage, checkCustomAIHealth, buildCustomAIIndex };
+module.exports = { chat, analyzeCarImage, checkCustomAIHealth, buildCustomAIIndex, compareWithCustomAI };
