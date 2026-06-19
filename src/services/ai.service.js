@@ -212,6 +212,79 @@ const buildCustomAIIndex = async () => {
   }
 };
 
+const analyzeDamageWithCustomAI = async (imageBase64, description, mimetype = 'image/jpeg', filename = 'image.jpg') => {
+  try {
+    const baseUrl = getCustomBaseUrl();
+    const url = new URL(`${baseUrl}/damage`);
+    if (description) {
+      url.searchParams.append("description", description);
+    }
+
+    const fetchOptions = {
+      method: "POST"
+    };
+
+    if (imageBase64) {
+      const formData = new FormData();
+      const buffer = Buffer.from(imageBase64, 'base64');
+      const blob = new Blob([buffer], { type: mimetype });
+      formData.append("file", blob, filename);
+      fetchOptions.body = formData;
+    }
+
+    const response = await fetch(url.toString(), fetchOptions);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Custom AI Damage Error:", errorText);
+      return { 
+        status: "error", 
+        message: "API error: " + errorText,
+      };
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    console.error("Fetch error to Custom AI damage:", err);
+    return { 
+      status: "error", 
+      message: "Connection error: " + err.message,
+    };
+  }
+};
+
+/**
+ * Analyse car damage from an image and/or description
+ * @param {string} imageBase64
+ * @param {string} description
+ * @param {string} mimetype
+ * @param {string} filename
+ * @returns {Promise<Object>} - Damage report analysis
+ */
+const analyzeDamage = async (imageBase64, description, mimetype = 'image/jpeg', filename = 'image.jpg') => {
+  if (ACTIVE_AI === "custom") {
+    return analyzeDamageWithCustomAI(imageBase64, description, mimetype, filename);
+  }
+  
+  // Non-custom AI fallback
+  const prompt = `Analyze this car damage. Description: ${description || "None"}.
+Provide a damage report detailing component, severity, description, internal risk likelihood, and estimated repair cost.`;
+  const messages = [{ role: "user", content: prompt }];
+  const responseData = await chat(messages, { imageBase64, mimetype, filename });
+  return {
+    status: "known",
+    message: responseData.answer || "Damage analysis complete.",
+    safe_to_drive: true,
+    overall_severity: "minor",
+    damage_areas: [],
+    internal_risks: [],
+    total_cost_min: 0,
+    total_cost_max: 0,
+    priority_actions: []
+  };
+};
+
 // ─── Public interface ─────────────────────────────────────────────────────────
 
 /**
@@ -290,4 +363,4 @@ const analyzeCarImage = async (imageBase64, mimetype = 'image/jpeg', filename = 
 };
 
 
-module.exports = { chat, analyzeCarImage, checkCustomAIHealth, buildCustomAIIndex, compareWithCustomAI };
+module.exports = { chat, analyzeCarImage, checkCustomAIHealth, buildCustomAIIndex, compareWithCustomAI, analyzeDamage };

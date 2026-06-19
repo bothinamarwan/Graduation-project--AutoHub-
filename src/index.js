@@ -19,6 +19,7 @@ const dealerRoutes = require('./routes/dealer.routes');
 const postRoutes = require('./routes/post.routes');
 const vehicleRoutes = require('./routes/vehicle.routes');
 const aiRoutes = require('./routes/ai.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
@@ -113,6 +114,7 @@ app.use('/api/dealers', dealerRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/ai', aiLimiter, aiRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

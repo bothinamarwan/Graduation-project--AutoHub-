@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String, minlength: 6, select: false }, // optional — Google users have no password
     phone:    { type: String, trim: true },
     avatar:   { type: String, default: "" },
-    role:     { type: String, enum: ["user", "dealer"], default: "user" },
+    role:     { type: String, enum: ["user", "dealer", "admin"], default: "user" },
     
     // ── Email Confirmation (Defaults to true, flow removed) ───────────────────
     isEmailConfirmed: { type: Boolean, default: true },

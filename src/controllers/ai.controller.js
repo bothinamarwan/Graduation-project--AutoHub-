@@ -1,4 +1,4 @@
-const { chat, analyzeCarImage, checkCustomAIHealth, buildCustomAIIndex, compareWithCustomAI } = require('../services/ai.service');
+const { chat, analyzeCarImage, checkCustomAIHealth, buildCustomAIIndex, compareWithCustomAI, analyzeDamage: analyzeDamageService } = require('../services/ai.service');
 const Conversation               = require('../models/Conversation');
 const Message                    = require('../models/Message');
 const asyncHandler               = require('../utils/asyncHandler');
@@ -194,4 +194,60 @@ const triggerBuildIndex = asyncHandler(async (req, res) => {
   res.success({ indexStatus: result });
 });
 
-module.exports = { getConversations, deleteConversation, getMessages, chatWithBot, analyzeImage, chatWithImage, compareCars, getHealth, triggerBuildIndex };
+// POST /api/ai/conversations
+const createConversation = asyncHandler(async (req, res) => {
+  const { title } = req.body;
+  const convo = await Conversation.create({
+    user: req.user._id,
+    title: (title || 'New conversation').slice(0, 60),
+    isActive: true
+  });
+  res.success({ conversation: convo }, 'Conversation created.');
+});
+
+// POST /api/ai/damage
+const analyzeDamage = asyncHandler(async (req, res) => {
+  const { description, conversationId } = req.body;
+  
+  let imageBase64 = null;
+  let mimetype = null;
+  let filename = null;
+  let imageUrl = null;
+
+  if (req.file) {
+    imageBase64 = await multerFileToBase64(req.file);
+    mimetype = req.file.mimetype;
+    filename = req.file.originalname;
+    imageUrl = getFileUrl(req, req.file);
+  }
+
+  if (!imageBase64 && !description?.trim()) {
+    return res.fail('Either an image file or a description is required.');
+  }
+
+  const result = await analyzeDamageService(imageBase64, description, mimetype, filename);
+  
+  // Save to database
+  const title = (description || 'Damage Analysis').slice(0, 60);
+  const convo = await findOrCreateConversation(req.user._id, conversationId, title);
+
+  const userContent = description ? `Analyzed damage: ${description}` : 'Analyzed damage image';
+  await saveUserMessage(convo._id, userContent, imageUrl);
+  await saveAIMessage(convo._id, result.message || 'Damage assessment complete');
+
+  res.success({ report: result, imageUrl, conversationId: convo._id });
+});
+
+module.exports = { 
+  getConversations, 
+  deleteConversation, 
+  getMessages, 
+  chatWithBot, 
+  analyzeImage, 
+  chatWithImage, 
+  compareCars, 
+  getHealth, 
+  triggerBuildIndex,
+  createConversation,
+  analyzeDamage
+};

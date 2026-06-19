@@ -2,7 +2,8 @@ const express = require('express');
 const router  = express.Router();
 const {
   getConversations, deleteConversation, getMessages,
-  chatWithBot, analyzeImage, chatWithImage, compareCars, getHealth, triggerBuildIndex
+  chatWithBot, analyzeImage, chatWithImage, compareCars, getHealth, triggerBuildIndex,
+  createConversation, analyzeDamage
 } = require('../controllers/ai.controller');
 const { verifyToken }  = require('../middleware/auth.middleware');
 const { uploadSingle, uploadAI } = require('../middleware/upload.middleware');
@@ -23,6 +24,29 @@ router.use(verifyToken); // all AI routes require login
  *         description: List of conversations
  */
 router.get('/conversations',              getConversations);
+
+/**
+ * @swagger
+ * /api/ai/conversations:
+ *   post:
+ *     summary: Create a new AI conversation
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Optional title for the conversation
+ *     responses:
+ *       200:
+ *         description: Conversation created successfully
+ */
+router.post('/conversations',             createConversation);
 
 /**
  * @swagger
@@ -178,6 +202,37 @@ router.post('/analyze-image',   uploadAI, analyzeImage);
  *         description: AI response
  */
 router.post('/chat-with-image', uploadAI, chatWithImage);
+
+/**
+ * @swagger
+ * /api/ai/damage:
+ *   post:
+ *     summary: Analyze car damage from an image and/or description
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Optional car damage photo
+ *               description:
+ *                 type: string
+ *                 description: Optional description of the damage
+ *               conversationId:
+ *                 type: string
+ *                 description: Optional conversation ID
+ *     responses:
+ *       200:
+ *         description: Damage analysis report
+ */
+router.post('/damage',          uploadAI, analyzeDamage);
 
 /**
  * @swagger

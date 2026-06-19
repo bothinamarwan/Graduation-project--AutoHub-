@@ -71,6 +71,18 @@ const isUser = (req, res, next) => {
   }
 };
 
+/**
+ * isAdmin
+ * Restricts access to admins only.
+ */
+const isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.fail('Access denied: Admins only.', 403);
+  }
+};
+
 module.exports = {
   verifyToken,
   protect: verifyToken, // alias for backward compatibility if needed
@@ -78,4 +90,6 @@ module.exports = {
   dealerOnly: isDealer, // alias
   isUser,
   userOnly: isUser,    // alias
+  isAdmin,
+  adminOnly: isAdmin,  // alias
 };

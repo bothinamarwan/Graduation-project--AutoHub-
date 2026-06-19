@@ -22,6 +22,7 @@ const postSchema = new mongoose.Schema(
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     likesCount: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
+    status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     // Link to the Vehicle knowledge base (optional but useful)
     vehicleRef: { type: mongoose.Schema.Types.ObjectId, ref: "Vehicle" },
   },

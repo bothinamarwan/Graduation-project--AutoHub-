@@ -1,5 +1,7 @@
 const Post           = require('../models/Post');
 const Like           = require('../models/Like');
+const User           = require('../models/User');
+const jwt            = require('jsonwebtoken');
 const asyncHandler   = require('../utils/asyncHandler');
 const { getFileUrls } = require('../utils/Imagehelper');
 const { getPaginationParams, buildPagination } = require('../utils/Paginate');
@@ -9,7 +11,7 @@ const getAllPosts = asyncHandler(async (req, res) => {
   const { brand, model, bodyType, condition, minPrice, maxPrice, search } = req.query;
   const { page, limit, skip } = getPaginationParams(req.query);
 
-  const filter = { isActive: true };
+  const filter = { isActive: true, status: 'approved' };
   if (brand)              filter.brand     = new RegExp(brand, 'i');
   if (model)              filter.model     = new RegExp(model, 'i');
   if (bodyType)           filter.bodyType  = bodyType;
@@ -41,6 +43,36 @@ const getPostById = asyncHandler(async (req, res) => {
     .populate('vehicleRef');
 
   if (!post) return res.fail('Post not found.', 404);
+
+  if (post.status !== 'approved') {
+    let userId;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      try {
+        const token = req.headers.authorization.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        userId = decoded.id;
+      } catch (error) {
+        // Silent catch for invalid/expired token
+      }
+    }
+
+    if (!userId && req.session && req.session.userId) {
+      userId = req.session.userId;
+    }
+
+    let isAuthorized = false;
+    if (userId) {
+      const user = await User.findById(userId);
+      if (user && (user.role === 'admin' || user._id.toString() === post.dealer._id.toString())) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
+      return res.fail('Post not found.', 404);
+    }
+  }
+
   res.success({ post });
 });
 
