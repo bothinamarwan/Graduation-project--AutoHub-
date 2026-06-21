@@ -16,7 +16,7 @@ const connectDB = async () => {
     const adminPassword = process.env.ADMIN_PASSWORD;
 
     if (adminEmail && adminPassword) {
-      const adminExists = await User.findOne({ email: adminEmail.toLowerCase() });
+      const adminExists = await User.findOne({ email: adminEmail.toLowerCase() }).select('+password');
       if (!adminExists) {
         await User.create({
           name: 'Admin User',
@@ -28,7 +28,30 @@ const connectDB = async () => {
         });
         console.log(`✅  Admin user auto-seeded successfully (${adminEmail})`);
       } else {
-        console.log('ℹ️  Admin user already exists in database.');
+        let updated = false;
+        if (adminExists.role !== 'admin') {
+          adminExists.role = 'admin';
+          updated = true;
+        }
+        if (adminExists.authProvider !== 'local') {
+          adminExists.authProvider = 'local';
+          updated = true;
+        }
+        if (adminExists.isProfileComplete !== true) {
+          adminExists.isProfileComplete = true;
+          updated = true;
+        }
+        const isPasswordCorrect = await adminExists.comparePassword(adminPassword);
+        if (!isPasswordCorrect) {
+          adminExists.password = adminPassword; // Pre-save hook will hash this
+          updated = true;
+        }
+        if (updated) {
+          await adminExists.save();
+          console.log(`✅  Admin user credentials/role updated successfully to match environment variables.`);
+        } else {
+          console.log('ℹ️  Admin user already exists in database with correct credentials and role.');
+        }
       }
     } else {
       console.log('⚠️  Admin email or password missing in environment variables. Skipping seed.');
