@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const User = require('../models/User');
 
 /**
  * connectDB
@@ -9,6 +10,29 @@ const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI);
     console.log(`\n✅  MongoDB Connected: ${conn.connection.host}`);
+
+    // Seed admin user if it doesn't exist
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (adminEmail && adminPassword) {
+      const adminExists = await User.findOne({ email: adminEmail.toLowerCase() });
+      if (!adminExists) {
+        await User.create({
+          name: 'Admin User',
+          email: adminEmail,
+          password: adminPassword,
+          role: 'admin',
+          authProvider: 'local',
+          isProfileComplete: true,
+        });
+        console.log(`✅  Admin user auto-seeded successfully (${adminEmail})`);
+      } else {
+        console.log('ℹ️  Admin user already exists in database.');
+      }
+    } else {
+      console.log('⚠️  Admin email or password missing in environment variables. Skipping seed.');
+    }
   } catch (error) {
     console.error(`\n❌  Database connection error: ${error.message}`);
     process.exit(1);
