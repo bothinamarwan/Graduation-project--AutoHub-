@@ -6,6 +6,8 @@ const {
 } = require('../controllers/vehicle.controller');
 const validate = require('../middleware/validate.middleware');
 const vehicleValidation = require('../validations/vehicle.validation');
+const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
+const { uploadSingle } = require('../middleware/upload.middleware');
 
 // ⚠️  Specific named routes before /:id
 /**
@@ -81,12 +83,14 @@ router.get('/:id', getVehicleById);
  * @swagger
  * /api/vehicles:
  *   post:
- *     summary: Create a new vehicle in the knowledge base (Admin)
+ *     summary: Create a new vehicle in the knowledge base (Admin only)
  *     tags: [Vehicles]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
@@ -99,12 +103,26 @@ router.get('/:id', getVehicleById);
  *                 type: string
  *               bodyType:
  *                 type: string
- *               year:
- *                 type: integer
+ *               fuelType:
+ *                 type: string
+ *               transmission:
+ *                 type: string
+ *               engineSize:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Vehicle image upload
  *     responses:
  *       201:
  *         description: Vehicle created successfully
+ *       401:
+ *         description: Unauthorized (missing or invalid token)
+ *       403:
+ *         description: Forbidden (Admins only)
  */
-router.post('/', validate(vehicleValidation.createVehicle), createVehicle);
+router.post('/', verifyToken, isAdmin, uploadSingle, validate(vehicleValidation.createVehicle), createVehicle);
 
 module.exports = router;

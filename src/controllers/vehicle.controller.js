@@ -1,6 +1,7 @@
 const Vehicle        = require('../models/Vehicle');
 const asyncHandler   = require('../utils/asyncHandler');
 const { getPaginationParams, buildPagination } = require('../utils/Paginate');
+const { getFileUrl } = require('../utils/Imagehelper');
 
 // GET /api/vehicles
 const searchVehicles = asyncHandler(async (req, res) => {
@@ -43,7 +44,11 @@ const getBodyTypes = asyncHandler(async (req, res) => {
 
 // POST /api/vehicles  (seed)
 const createVehicle = asyncHandler(async (req, res) => {
-  const vehicle = await Vehicle.create(req.body);
+  const vehicleData = { ...req.body };
+  if (req.file) {
+    vehicleData.image = getFileUrl(req, req.file);
+  }
+  const vehicle = await Vehicle.create(vehicleData);
   res.created({ vehicle }, 'Vehicle added to knowledge base.');
 });
 
