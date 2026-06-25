@@ -1,4 +1,6 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
 
 /**
  * Creates a fresh transporter using env vars at call time.
