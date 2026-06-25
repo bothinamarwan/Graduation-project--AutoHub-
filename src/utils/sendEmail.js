@@ -1,62 +1,27 @@
-const nodemailer = require('nodemailer');
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
+const { Resend } = require('resend');
 
 /**
- * Creates a fresh transporter using env vars at call time.
- * IMPORTANT: Do NOT move this outside the function.
- * The transporter must be created inside sendEmail() so it reads
- * process.env.EMAIL_USER and process.env.EMAIL_PASS AFTER dotenv
- * has loaded them. Creating it at module load time results in
- * undefined credentials because this file is require()'d before
- * dotenv.config() runs in index.js.
- *
- * family: 4  → forces IPv4 to fix ENETUNREACH on Railway (IPv6 not supported for SMTP)
+ * Sends an email using the Resend API (HTTP-based, works on Railway).
+ * Since no custom domain is verified, we send FROM Resend's sandbox address.
  */
-const createTransporter = () =>
-  nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    tls: {
-      servername: 'smtp.gmail.com',
-    },
-    // Ultimate fallback to strictly force IPv4 resolution in Nodemailer
-    lookup: (hostname, options, callback) => {
-      dns.lookup(hostname, { family: 4 }, (err, address, family) => {
-        callback(err, address, family);
-      });
-    },
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-        ? process.env.EMAIL_PASS.replace(/\s+/g, '')
-        : '',
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-  });
-
 const sendEmail = async ({ to, subject, text, html }) => {
-  const transporter = createTransporter();
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
-  const mailOptions = {
-    from: `"AutoHub" <${process.env.EMAIL_USER}>`,
+  const { data, error } = await resend.emails.send({
+    from: 'AutoHub <onboarding@resend.dev>',
     to,
     subject,
     text,
     html,
-  };
+  });
 
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent to ${to}: ${info.messageId}`);
-    return info;
-  } catch (error) {
+  if (error) {
     console.error(`❌ Failed to send email to ${to}:`, error.message);
-    throw error;
+    throw new Error(error.message);
   }
+
+  console.log(`✅ Email sent to ${to}: ${data.id}`);
+  return data;
 };
 
 module.exports = sendEmail;
