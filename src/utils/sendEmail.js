@@ -17,14 +17,21 @@ const createTransporter = () =>
   nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
-    secure: true, // true for 465, false for other ports
-    family: 4,     // Force IPv4 — fixes Railway ENETUNREACH error
+    secure: true,
+    tls: {
+      servername: 'smtp.gmail.com',
+    },
+    // Ultimate fallback to strictly force IPv4 resolution in Nodemailer
+    lookup: (hostname, options, callback) => {
+      dns.lookup(hostname, { family: 4 }, (err, address, family) => {
+        callback(err, address, family);
+      });
+    },
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
         ? process.env.EMAIL_PASS.replace(/\s+/g, '')
         : '',
-      // pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.trim() : '',
     },
     connectionTimeout: 10000,
     greetingTimeout: 10000,
