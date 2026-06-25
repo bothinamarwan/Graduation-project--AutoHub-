@@ -1,27 +1,59 @@
-const { Resend } = require('resend');
-
 /**
- * Sends an email using the Resend API (HTTP-based, works on Railway).
- * Since no custom domain is verified, we send FROM Resend's sandbox address.
+ * Sends an email using the Brevo (Sendinblue) HTTP API.
+ * This completely bypasses Railway SMTP blocks and allows sending to anyone.
  */
 const sendEmail = async ({ to, subject, text, html }) => {
-  const resend = new Resend(process.env.RESEND_API_KEY);
-
-  const { data, error } = await resend.emails.send({
-    from: 'AutoHub <onboarding@resend.dev>',
-    to,
-    subject,
-    text,
-    html,
-  });
-
-  if (error) {
-    console.error(`❌ Failed to send email to ${to}:`, error.message);
-    throw new Error(error.message);
+  const BREVO_API_KEY = process.env.BREVO_API_KEY;
+  
+  if (!BREVO_API_KEY) {
+    console.error('❌ BREVO_API_KEY is missing from environment variables');
+    throw new Error('BREVO_API_KEY is missing');
   }
 
-  console.log(`✅ Email sent to ${to}: ${data.id}`);
-  return data;
+  const payload = {
+    sender: {
+      name: "AutoHub",
+      email: process.env.EMAIL_USER || "bosinamarwan58@gmail.com"
+    },
+    to: [
+      {
+        email: to
+      }
+    ],
+    subject: subject,
+    textContent: text,
+  };
+
+  // Add HTML only if provided
+  if (html) {
+    payload.htmlContent = html;
+  }
+
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error(`❌ Failed to send email to ${to}:`, errorData);
+      throw new Error(errorData.message || 'Brevo API Error');
+    }
+
+    const data = await response.json();
+    console.log(`✅ Email sent via Brevo to ${to}: ${data.messageId}`);
+    return data;
+
+  } catch (error) {
+    console.error(`❌ Network error while sending email to ${to}:`, error.message);
+    throw error;
+  }
 };
 
 module.exports = sendEmail;
