@@ -9,10 +9,11 @@ const { getPaginationParams, buildPagination } = require('../utils/Paginate');
  * Retrieves administrative dashboard statistics (users, dealers, post counts by status).
  */
 const getStats = asyncHandler(async (req, res) => {
-  const [userCount, dealerCount, totalUsers] = await Promise.all([
+  const [userCount, dealerCount, totalUsers, allUsersList] = await Promise.all([
     User.countDocuments({ role: 'user' }),
     User.countDocuments({ role: 'dealer' }),
-    User.countDocuments()
+    User.countDocuments(),
+    User.find().select('-password').sort({ createdAt: -1 }).lean()
   ]);
 
   const postStats = await Post.aggregate([
@@ -32,7 +33,8 @@ const getStats = asyncHandler(async (req, res) => {
     users: {
       standardUsers: userCount,
       dealers: dealerCount,
-      totalUsers: totalUsers
+      totalUsers: totalUsers,
+      accounts: allUsersList
     },
     posts: postCounts
   }, 'Admin statistics retrieved successfully.');
@@ -120,9 +122,46 @@ const updateUserRole = asyncHandler(async (req, res) => {
   res.success({ user }, `User role updated successfully to '${role}'.`);
 });
 
+/**
+ * getUsers
+ * GET /api/admin/users
+ * Retrieves users for admin, with pagination and role filtering.
+ */
+const getUsers = asyncHandler(async (req, res) => {
+  const { role, search } = req.query;
+  const { page, limit, skip } = getPaginationParams(req.query);
+
+  const filter = {};
+  if (role) filter.role = role;
+  if (search) {
+    filter.$or = [
+      { name: new RegExp(search, 'i') },
+      { email: new RegExp(search, 'i') }
+    ];
+  }
+
+  const [users, total] = await Promise.all([
+    User.find(filter)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    User.countDocuments(filter)
+  ]);
+
+  res.success(
+    { users },
+    'Users fetched successfully.',
+    200,
+    buildPagination(total, page, limit)
+  );
+});
+
 module.exports = {
   getStats,
   getModerationPosts,
   updatePostStatus,
-  updateUserRole
+  updateUserRole,
+  getUsers
 };

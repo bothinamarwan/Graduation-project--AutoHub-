@@ -25,7 +25,15 @@ const validate = (schema) => (req, res, next) => {
     return res.fail(errorMessage, 400, error.details);
   }
 
-  Object.assign(req, value);
+  Object.keys(value).forEach((key) => {
+    Object.defineProperty(req, key, {
+      value: value[key],
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  });
+
   return next();
 };
 

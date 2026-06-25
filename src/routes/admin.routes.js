@@ -1,6 +1,6 @@
 const express = require('express');
 const router  = express.Router();
-const { getStats, getModerationPosts, updatePostStatus, updateUserRole } = require('../controllers/admin.controller');
+const { getStats, getModerationPosts, updatePostStatus, updateUserRole, getUsers } = require('../controllers/admin.controller');
 const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
 const validate = require('../middleware/validate.middleware');
 const adminValidation = require('../validations/admin.validation');
@@ -25,6 +25,30 @@ router.use(verifyToken, isAdmin);
  *         description: Forbidden (Not an admin)
  */
 router.get('/stats', getStats);
+
+/**
+ * @swagger
+ * /api/admin/users:
+ *   get:
+ *     summary: Retrieve users (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [user, dealer, admin]
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Users retrieved successfully
+ */
+router.get('/users', getUsers);
 
 /**
  * @swagger
