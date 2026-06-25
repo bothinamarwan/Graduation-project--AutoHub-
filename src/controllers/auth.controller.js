@@ -153,7 +153,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
     await user.save({ validateBeforeSave: false });
 
-    return res.fail('Email could not be sent', 500);
+    return res.fail(`Email could not be sent: ${err.message}`, 500);
   }
 });
 
