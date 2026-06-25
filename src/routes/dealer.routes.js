@@ -4,6 +4,7 @@ const {
   getProfile, getPublicProfile,
   updateProfile, getMyPosts, getStats,
 } = require('../controllers/dealer.controller');
+const { changePassword }        = require('../controllers/user.controller');
 const { verifyToken, isDealer } = require('../middleware/auth.middleware');
 const { uploadFields }          = require('../middleware/upload.middleware');
 
@@ -60,6 +61,38 @@ router.get('/me/profile', verifyToken, isDealer, getProfile);
  *         description: Profile updated
  */
 router.put('/me/profile', verifyToken, isDealer, uploadFields, updateProfile);
+
+/**
+ * @swagger
+ * /api/dealers/me/change-password:
+ *   put:
+ *     summary: Change dealer password
+ *     tags: [Dealers]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - oldPassword
+ *               - newPassword
+ *             properties:
+ *               oldPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ */
+router.put('/me/change-password', verifyToken, isDealer, changePassword);
 
 /**
  * @swagger

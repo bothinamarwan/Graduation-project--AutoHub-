@@ -5,7 +5,7 @@ const {
   getSavedPosts, savePost, getLikedPosts,
 } = require('../controllers/user.controller');
 const { verifyToken }  = require('../middleware/auth.middleware');
-const { uploadSingle } = require('../middleware/upload.middleware');
+const { uploadAvatar } = require('../middleware/upload.middleware');
 
 router.use(verifyToken); // all user routes require login
 
@@ -49,7 +49,7 @@ router.get('/profile',            getProfile);
  *       200:
  *         description: Profile updated
  */
-router.put('/profile',            uploadSingle, updateProfile);
+router.put('/profile',            uploadAvatar, updateProfile);
 
 /**
  * @swagger

@@ -26,16 +26,17 @@ const updateProfile = asyncHandler(async (req, res) => {
 
 // PUT /api/users/change-password
 const changePassword = asyncHandler(async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
+  const oldPassword = req.body.oldPassword || req.body.currentPassword;
+  const newPassword = req.body.newPassword;
 
-  if (!currentPassword || !newPassword)
-    return res.fail('Both passwords are required.');
+  if (!oldPassword || !newPassword)
+    return res.fail('Both passwords are required.', 400);
 
   if (req.user.authProvider === 'google')
-    return res.fail('Google accounts cannot change password here.');
+    return res.fail('Google accounts cannot change password here.', 400);
 
   const user = await User.findById(req.user._id).select('+password');
-  if (!(await user.comparePassword(currentPassword)))
+  if (!(await user.comparePassword(oldPassword)))
     return res.fail('Current password is incorrect.', 401);
 
   user.password = newPassword;

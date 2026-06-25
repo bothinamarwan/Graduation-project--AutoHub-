@@ -3,7 +3,7 @@ const router   = express.Router();
 const passport = require('../config/passport');
 const {
   registerUser, registerDealer, login, logout, getMe,
-  googleCallback,
+  googleCallback, forgotPassword, resetPassword
 } = require('../controllers/auth.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 const validate = require('../middleware/validate.middleware');
@@ -132,6 +132,64 @@ router.post('/login',           validate(authValidation.login), login);
  *         description: User logged out successfully
  */
 router.post('/logout',          logout);
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Forgot password
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email sent
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Email could not be sent
+ */
+router.post('/forgot-password', forgotPassword);
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   put:
+ *     summary: Reset password using OTP
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - otp
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *               otp:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Invalid OTP or email
+ */
+router.put('/reset-password', resetPassword);
 /**
  * @swagger
  * /api/auth/me:
@@ -166,9 +224,14 @@ router.get('/me',               verifyToken, getMe);
  *         description: Redirects to Google
  */
 // Step 1 — redirect to Google consent screen
-router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'], session: false })
-);
+router.get('/google', (req, res, next) => {
+  const redirectUrl = req.query.redirect || process.env.CLIENT_URL || 'http://localhost:5173';
+  passport.authenticate('google', { 
+    scope: ['profile', 'email'], 
+    session: false,
+    state: redirectUrl 
+  })(req, res, next);
+});
 
 /**
  * @swagger
@@ -176,7 +239,9 @@ router.get('/google',
  *   get:
  *     summary: Google OAuth callback
  *     tags: [Auth]
- *     description: Called by Google after successful authentication
+ *     description: >
+ *       Called by Google after successful authentication. <br><br>
+ *       **⚠️ NOTE:** You cannot test this endpoint directly using the "Try it out" button. It requires a valid Google OAuth code and state in the query parameters, and it redirects the browser to the frontend application. Attempting to execute it here will result in a CORS/Network error due to the redirect.
  *     responses:
  *       302:
  *         description: Redirects to frontend with tokens

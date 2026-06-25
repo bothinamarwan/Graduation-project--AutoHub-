@@ -37,6 +37,7 @@ const limits = { fileSize: 5 * 1024 * 1024 }; // 5 MB
 
 // ── Export upload instances ───────────────────────────────────────────────────
 const uploadSingle   = multer({ storage, fileFilter: imageFilter, limits }).single('image');
+const uploadAvatar   = multer({ storage, fileFilter: imageFilter, limits }).single('avatar');
 const uploadAI       = multer({ storage: aiStorage, fileFilter: imageFilter, limits }).single('image');
 const uploadMultiple = multer({ storage, fileFilter: imageFilter, limits }).array('images', 8);
 const uploadFields   = multer({ storage, fileFilter: imageFilter, limits }).fields([
@@ -44,4 +45,4 @@ const uploadFields   = multer({ storage, fileFilter: imageFilter, limits }).fiel
   { name: 'coverImage', maxCount: 1 },
 ]);
 
-module.exports = { uploadSingle, uploadAI, uploadMultiple, uploadFields };
+module.exports = { uploadSingle, uploadAvatar, uploadAI, uploadMultiple, uploadFields };
