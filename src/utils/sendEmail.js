@@ -16,8 +16,8 @@ dns.setDefaultResultOrder('ipv4first');
 const createTransporter = () =>
   nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // STARTTLS
+    port: 465,
+    secure: true, // true for 465, false for other ports
     family: 4,     // Force IPv4 — fixes Railway ENETUNREACH error
     auth: {
       user: process.env.EMAIL_USER,
