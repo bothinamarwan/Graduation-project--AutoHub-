@@ -1,6 +1,6 @@
 const express = require('express');
 const router  = express.Router();
-const { getStats, getModerationPosts, updatePostStatus, updateUserRole, getUsers } = require('../controllers/admin.controller');
+const { getStats, getModerationPosts, updatePostStatus, updateUserRole, getUsers, getDealers } = require('../controllers/admin.controller');
 const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
 const validate = require('../middleware/validate.middleware');
 const adminValidation = require('../validations/admin.validation');
@@ -49,6 +49,25 @@ router.get('/stats', getStats);
  *         description: Users retrieved successfully
  */
 router.get('/users', getUsers);
+
+/**
+ * @swagger
+ * /api/admin/dealers:
+ *   get:
+ *     summary: Retrieve all dealers (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Dealers retrieved successfully
+ */
+router.get('/dealers', getDealers);
 
 /**
  * @swagger

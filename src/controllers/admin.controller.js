@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Post = require('../models/Post');
+const Dealer = require('../models/Dealer');
 const asyncHandler = require('../utils/asyncHandler');
 const { getPaginationParams, buildPagination } = require('../utils/Paginate');
 
@@ -158,10 +159,46 @@ const getUsers = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * getDealers
+ * GET /api/admin/dealers
+ * Retrieves dealers for admin, with pagination.
+ */
+const getDealers = asyncHandler(async (req, res) => {
+  const { search } = req.query;
+  const { page, limit, skip } = getPaginationParams(req.query);
+
+  const filter = {};
+  if (search) {
+    filter.$or = [
+      { businessName: new RegExp(search, 'i') },
+      { phone: new RegExp(search, 'i') }
+    ];
+  }
+
+  const [dealers, total] = await Promise.all([
+    Dealer.find(filter)
+      .populate('user', '-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Dealer.countDocuments(filter)
+  ]);
+
+  res.success(
+    { dealers },
+    'Dealers fetched successfully.',
+    200,
+    buildPagination(total, page, limit)
+  );
+});
+
 module.exports = {
   getStats,
   getModerationPosts,
   updatePostStatus,
   updateUserRole,
-  getUsers
+  getUsers,
+  getDealers
 };
